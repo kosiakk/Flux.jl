@@ -57,19 +57,14 @@ julia> model.bias
  0.0
 ```
 
-Under the hood, a dense layer is a struct with fields `weight` and `bias`. `weight` represents a weights' matrix and `bias` represents a bias vector. There's another way to think about a model. In Flux, *models are conceptually predictive functions*: 
+Under the hood, a dense layer is a struct with fields `weight` and `bias`. `weight` represents a weights' matrix and `bias` represents a bias vector. There's another way to think about a model. In Flux, *models are conceptually predictive functions*.
 
-```jldoctest overview
-julia> predict = Dense(1 => 1)
-Dense(1 => 1)       # 2 parameters
-```
-
-`Dense(1 => 1)` also implements the function `σ(Wx+b)` where `W` and `b` are the weights and biases. `σ` is an activation function (more on activations later). Our model has one weight and one bias, but typical models will have many more. Think of weights and biases as knobs and levers Flux can use to tune predictions. Activation functions are transformations that tailor models to your needs. 
+`Dense(1 => 1)` also implements the function `σ(Wx+b)` where `W` and `b` are the weights and biases. `σ` is an activation function. Our model has one weight and one bias, but typical models will have many more. Think of weights and biases as knobs and levers Flux can use to tune predictions. Activation functions are transformations that tailor models to your needs. 
 
 This model will already make predictions, though not accurate ones yet:
 
 ```jldoctest overview; filter = r"[+-]?([0-9]*[.])?[0-9]+(f[+-]*[0-9])?"
-julia> predict(x_train)
+julia> model(x_train)
 1×6 Matrix{Float32}:
  0.0  0.906654  1.81331  2.71996  3.62662  4.53327
 ```
@@ -81,7 +76,7 @@ julia> using Statistics
 
 julia> loss(model, x, y) = mean(abs2.(model(x) .- y));
 
-julia> loss(predict, x_train, y_train)
+julia> loss(model, x_train, y_train)
 122.64734f0
 ```
 
@@ -105,11 +100,11 @@ julia> data = [(x_train, y_train)]
 Now, we have the optimiser and data we'll pass to `train!`. All that remains are the parameters of the model. Remember, each model is a Julia struct with a function and configurable parameters. Remember, the dense layer has weights and biases that depend on the dimensions of the inputs and outputs: 
 
 ```jldoctest overview; filter = r"[+-]?([0-9]*[.])?[0-9]+(f[+-]*[0-9])?"
-julia> predict.weight
+julia> model.weight
 1×1 Matrix{Float32}:
  0.9066542
 
-julia> predict.bias
+julia> model.bias
 1-element Vector{Float32}:
  0.0
 ```
@@ -121,20 +116,20 @@ Flux will adjust predictions by iteratively changing these parameters according 
 This optimiser implements the classic gradient descent strategy. Now improve the parameters of the model with a call to [`Flux.train!`](@ref) like this:
 
 ```jldoctest overview
-julia> train!(loss, predict, data, opt)
+julia> train!(loss, model, data, opt)
 ```
 
 And check the loss:
 
 ```jldoctest overview; filter = r"[+-]?([0-9]*[.])?[0-9]+(f[+-]*[0-9])?"
-julia> loss(predict, x_train, y_train)
+julia> loss(model, x_train, y_train)
 116.38745f0
 ```
 
 It went down. Why? 
 
 ```jldoctest overview; filter = r"[+-]?([0-9]*[.])?[0-9]+(f[+-]*[0-9])?"
-julia> predict.weight, predict.bias
+julia> model.weight, model.bias
 (Float32[7.246838;;], Float32[1.748103])
 ```
 
@@ -146,13 +141,13 @@ In the previous section, we made a single call to `train!` which iterates over t
 
 ```jldoctest overview; filter = r"[+-]?([0-9]*[.])?[0-9]+(f[+-]*[0-9])?"
 julia> for epoch in 1:200
-         train!(loss, predict, data, opt)
+         train!(loss, model, data, opt)
        end
 
-julia> loss(predict, x_train, y_train)
+julia> loss(model, x_train, y_train)
 0.00339581f0
 
-julia> predict.weight, predict.bias
+julia> model.weight, model.bias
 (Float32[4.0159144;;], Float32[2.004479])
 ```
 
@@ -163,7 +158,7 @@ After 200 training steps, the loss went down, and the parameters are getting clo
 Now, let's verify the predictions:
 
 ```jldoctest overview; filter = r"[+-]?([0-9]*[.])?[0-9]+(f[+-]*[0-9])?"
-julia> predict(x_test)
+julia> model(x_test)
 1×5 Matrix{Float32}:
  26.1121  30.13  34.1479  38.1657  42.1836
 
@@ -176,9 +171,9 @@ The predictions are good. Here's how we got there.
 
 First, we gathered real-world data into the variables `x_train`, `y_train`, `x_test`, and `y_test`. The `x_*` data defines inputs, and the `y_*` data defines outputs. The `*_train` data is for training the model, and the `*_test` data is for verifying the model. Our data was based on the function `4x + 2`.
 
-Then, we built a single input, single output predictive model, `predict = Dense(1 => 1)`. The initial predictions weren't accurate, because we had not trained the model yet.
+Then, we built a single input, single output predictive model, `model = Dense(1 => 1)`. The initial predictions weren't accurate, because we had not trained the model yet.
 
-After building the model, we trained it with `train!(loss, predict, data, opt)`. The loss function is first, followed by the model itself, the training data, and the `Descent` optimiser provided by Flux. We ran the training step once, and observed that the parameters changed and the loss went down. Then, we ran the `train!` many times to finish the training process.
+After building the model, we trained it with `train!(loss, model, data, opt)`. The loss function is first, followed by the model itself, the training data, and the `Descent` optimiser provided by Flux. We ran the training step once, and observed that the parameters changed and the loss went down. Then, we ran the `train!` many times to finish the training process.
 
 After we trained the model, we verified it with the test data to verify the results. 
 
